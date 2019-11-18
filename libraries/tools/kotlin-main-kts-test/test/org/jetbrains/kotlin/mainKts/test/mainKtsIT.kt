@@ -19,6 +19,14 @@ class MainKtsIT {
     }
 
     @Test
+    fun testKotlinxHtml() {
+        runWithK2JVMCompilerAndMainKts(
+            "$TEST_DATA_ROOT/kotlinx-html.main.kts",
+            listOf("<html>", "  <body>", "    <h1>Hello, World!</h1>", "  </body>", "</html>")
+        )
+    }
+
+    @Test
     fun testImport() {
         val mainKtsJar = File("dist/kotlinc/lib/kotlin-main-kts.jar")
         Assert.assertTrue("kotlin-main-kts.jar not found, run dist task: ${mainKtsJar.absolutePath}", mainKtsJar.exists())
@@ -41,6 +49,19 @@ fun runWithKotlincAndMainKts(
     expectedOutPatterns: List<String> = emptyList(),
     expectedExitCode: Int = 0
 ) = runWithKotlinc(
+    scriptPath, expectedOutPatterns, expectedExitCode,
+    classpath = listOf(
+        File("dist/kotlinc/lib/kotlin-main-kts.jar").also {
+            Assert.assertTrue("kotlin-main-kts.jar not found, run dist task: ${it.absolutePath}", it.exists())
+        }
+    )
+)
+
+fun runWithK2JVMCompilerAndMainKts(
+    scriptPath: String,
+    expectedOutPatterns: List<String> = emptyList(),
+    expectedExitCode: Int = 0
+) = runWithK2JVMCompiler(
     scriptPath, expectedOutPatterns, expectedExitCode,
     classpath = listOf(
         File("dist/kotlinc/lib/kotlin-main-kts.jar").also {
