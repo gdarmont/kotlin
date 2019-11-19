@@ -339,11 +339,7 @@ class DeclarationsConverter(
             }
         }
 
-        val defaultDelegatedSuperTypeRef = when {
-            modifiers.isEnum() && (classKind == ClassKind.CLASS || classKind == ClassKind.INTERFACE) -> implicitEnumType
-            modifiers.isAnnotation() && (classKind == ClassKind.CLASS || classKind == ClassKind.INTERFACE) -> implicitAnnotationType
-            else -> implicitAnyType
-        }
+
 
         if (classKind == ClassKind.CLASS) {
             classKind = when {
@@ -354,7 +350,6 @@ class DeclarationsConverter(
         }
 
         val className = identifier.nameAsSafeName(if (modifiers.isCompanion()) "Companion" else "")
-        superTypeRefs.ifEmpty { superTypeRefs += defaultDelegatedSuperTypeRef }
         val isLocal = isClassLocal(classNode) { getParent() }
 
         return withChildClassName(className) {
@@ -391,12 +386,31 @@ class DeclarationsConverter(
             firClass.annotations += modifiers.annotations
             firClass.typeParameters += firTypeParameters
             firClass.joinTypeParameters(typeConstraints)
+
+            val selfType = null.toDelegatedSelfType(firClass)
+
+            val defaultDelegatedSuperTypeRef = when {
+                modifiers.isEnum() && (classKind == ClassKind.ENUM_CLASS) ->
+                    FirResolvedTypeRefImpl(
+                        source = null,
+                        ConeClassLikeTypeImpl(
+                            implicitEnumType.type.lookupTag,
+                            arrayOf(selfType.coneTypeUnsafe()),
+                            isNullable = false
+                        )
+                    )
+                modifiers.isAnnotation() && (classKind == ClassKind.ANNOTATION_CLASS) -> implicitAnnotationType
+                else -> implicitAnyType
+            }
+
+            superTypeRefs.ifEmpty { superTypeRefs += defaultDelegatedSuperTypeRef }
+
             firClass.superTypeRefs += superTypeRefs
 
             val classWrapper = ClassWrapper(
                 className, modifiers, classKind, primaryConstructor != null,
                 classBody.getChildNodesByType(SECONDARY_CONSTRUCTOR).isNotEmpty(),
-                null.toDelegatedSelfType(firClass),
+                selfType,
                 delegatedSuperTypeRef ?: defaultDelegatedSuperTypeRef, superTypeCallEntry
             )
             //parse primary constructor

@@ -23,9 +23,7 @@ import org.jetbrains.kotlin.fir.impl.FirLabelImpl
 import org.jetbrains.kotlin.fir.references.impl.*
 import org.jetbrains.kotlin.fir.symbols.CallableId
 import org.jetbrains.kotlin.fir.symbols.impl.*
-import org.jetbrains.kotlin.fir.types.EXTENSION_FUNCTION_ANNOTATION
-import org.jetbrains.kotlin.fir.types.FirTypeProjection
-import org.jetbrains.kotlin.fir.types.FirTypeRef
+import org.jetbrains.kotlin.fir.types.*
 import org.jetbrains.kotlin.fir.types.impl.*
 import org.jetbrains.kotlin.lexer.KtTokens.*
 import org.jetbrains.kotlin.name.ClassId
@@ -346,7 +344,14 @@ class RawFirBuilder(session: FirSession, val stubMode: Boolean) : BaseFirBuilder
             }
 
             val defaultDelegatedSuperTypeRef = when {
-                this is KtClass && this.isEnum() -> implicitEnumType
+                this is KtClass && this.isEnum() -> FirResolvedTypeRefImpl(
+                    null,
+                    ConeClassTypeImpl(
+                        implicitEnumType.type.lookupTag,
+                        delegatedSelfTypeRef?.coneTypeUnsafe<ConeKotlinType>()?.let { arrayOf(it) } ?: emptyArray(),
+                        isNullable = false
+                    )
+                )
                 this is KtClass && this.isAnnotation() -> implicitAnnotationType
                 else -> implicitAnyType
             }
