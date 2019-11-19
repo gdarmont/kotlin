@@ -79,6 +79,9 @@ abstract class CommonCompilerArguments : CommonToolArguments() {
     @Argument(value = "-script", description = "Evaluate the given Kotlin script (*.kts) file")
     var script: Boolean by FreezableVar(false)
 
+    @Argument(value = "-expression", description = "Evaluate the given string as a Kotlin script")
+    var expressions: Array<String>? by FreezableVar(null)
+
     @Argument(value = "-P", valueDescription = PLUGIN_OPTION_FORMAT, description = "Pass an option to a plugin")
     var pluginOptions: Array<String>? by FreezableVar(null)
 
