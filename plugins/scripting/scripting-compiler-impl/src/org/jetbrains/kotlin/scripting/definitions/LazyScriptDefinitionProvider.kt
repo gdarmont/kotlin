@@ -8,6 +8,7 @@ package org.jetbrains.kotlin.scripting.definitions
 import com.intellij.ide.highlighter.JavaFileType
 import org.jetbrains.kotlin.idea.KotlinFileType
 import java.io.File
+import java.net.URI
 import java.util.concurrent.locks.ReentrantReadWriteLock
 import kotlin.concurrent.read
 import kotlin.concurrent.write
@@ -25,6 +26,8 @@ abstract class LazyScriptDefinitionProvider : ScriptDefinitionProvider {
     override fun getDefaultDefinition(): ScriptDefinition =
         ScriptDefinition.getDefault(getScriptingHostConfiguration())
 
+    protected val fixedDefinitions: HashMap<URI, ScriptDefinition> = HashMap()
+
     private var _cachedDefinitions: Sequence<ScriptDefinition>? = null
     private val cachedDefinitions: Sequence<ScriptDefinition>
         get() {
@@ -41,23 +44,26 @@ abstract class LazyScriptDefinitionProvider : ScriptDefinitionProvider {
         }
     }
 
-    protected open fun nonScriptFileName(fileName: String) = nonScriptFilenameSuffixes.any {
-        fileName.endsWith(it, ignoreCase = true)
+    protected open fun nonScriptId(id: URI): Boolean {
+        val path = id.path
+        return path != null && nonScriptFilenameSuffixes.any {
+            path.endsWith(it, ignoreCase = true)
+        }
     }
 
-    override fun findDefinition(file: File): ScriptDefinition? =
-        if (nonScriptFileName(file.name)) null
+    override fun findDefinition(scriptId: URI): ScriptDefinition? =
+        if (nonScriptId(scriptId)) null
         else lock.read {
-            cachedDefinitions.firstOrNull { it.isScript(file) }
+            cachedDefinitions.firstOrNull { it.isScript(scriptId) }
         }
 
     override fun findScriptDefinition(fileName: String): KotlinScriptDefinition? =
-        if (nonScriptFileName(fileName)) null
+        if (nonScriptId(File(fileName).toURI())) null
         else lock.read {
             cachedDefinitions.map { it.legacyDefinition }.firstOrNull { it.isScript(fileName) }
         }
 
-    override fun isScript(file: File) = findDefinition(file) != null
+    override fun isScript(scriptId: URI): Boolean = findDefinition(scriptId) != null
 
     override fun getKnownFilenameExtensions(): Sequence<String> = lock.read {
         cachedDefinitions.map { it.fileExtension }

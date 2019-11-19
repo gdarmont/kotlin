@@ -7,7 +7,7 @@ package org.jetbrains.kotlin.scripting.definitions
 
 import com.intellij.openapi.components.ServiceManager
 import com.intellij.openapi.project.Project
-import java.io.File
+import java.net.URI
 
 interface ScriptDefinitionProvider {
     @Deprecated("Migrating to configuration refinement", level = DeprecationLevel.ERROR)
@@ -16,9 +16,9 @@ interface ScriptDefinitionProvider {
     @Deprecated("Migrating to configuration refinement", level = DeprecationLevel.ERROR)
     fun getDefaultScriptDefinition(): KotlinScriptDefinition
 
-    fun isScript(file: File): Boolean
+    fun isScript(scriptId: URI): Boolean
 
-    fun findDefinition(file: File): ScriptDefinition?
+    fun findDefinition(scriptId: URI): ScriptDefinition?
     fun getDefaultDefinition(): ScriptDefinition
 
     fun getKnownFilenameExtensions(): Sequence<String>

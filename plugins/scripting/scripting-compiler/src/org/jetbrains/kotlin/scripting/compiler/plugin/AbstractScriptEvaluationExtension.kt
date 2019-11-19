@@ -18,6 +18,7 @@ import org.jetbrains.kotlin.scripting.configuration.ScriptingConfigurationKeys
 import org.jetbrains.kotlin.scripting.definitions.ScriptDefinitionProvider
 import java.io.File
 import java.io.PrintStream
+import java.net.URI
 import kotlin.script.experimental.api.*
 import kotlin.script.experimental.host.toScriptSource
 
@@ -55,7 +56,9 @@ abstract class AbstractScriptEvaluationExtension : ScriptEvaluationExtension {
         if (messageCollector.hasErrors()) return ExitCode.COMPILATION_ERROR
 
         val scriptFile = File(sourcePath)
-        if (scriptFile.isDirectory || !scriptDefinitionProvider.isScript(scriptFile)) {
+        val script = scriptFile.toScriptSource()
+
+        if (scriptFile.isDirectory || !scriptDefinitionProvider.isScript(script.getURI()!!)) {
             val extensionHint =
                 if (configuration.get(ScriptingConfigurationKeys.SCRIPT_DEFINITIONS)?.let { it.size == 1 && it.first().isDefault } == true) " (.kts)"
                 else ""
@@ -63,9 +66,7 @@ abstract class AbstractScriptEvaluationExtension : ScriptEvaluationExtension {
             return ExitCode.COMPILATION_ERROR
         }
 
-        val script = scriptFile.toScriptSource()
-
-        val definition = scriptDefinitionProvider.findDefinition(scriptFile) ?: scriptDefinitionProvider.getDefaultDefinition()
+        val definition = scriptDefinitionProvider.findDefinition(script.getURI()!!) ?: scriptDefinitionProvider.getDefaultDefinition()
 
         val scriptArgs =
             if (arguments.freeArgs.isNotEmpty()) arguments.freeArgs.subList(1, arguments.freeArgs.size)
@@ -134,3 +135,6 @@ private fun ResultValue.Error.renderError(stream: PrintStream) {
         }
     }
 }
+
+fun SourceCode.getURI(): URI? =
+    locationId?.let { URI(it) } ?: name?.let { File(it).toURI() }

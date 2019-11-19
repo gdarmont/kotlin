@@ -9,6 +9,7 @@ import com.intellij.openapi.util.UserDataHolderBase
 import com.intellij.openapi.util.io.FileUtilRt
 import org.jetbrains.kotlin.scripting.resolve.KotlinScriptDefinitionFromAnnotatedTemplate
 import java.io.File
+import java.net.URI
 import kotlin.reflect.KClass
 import kotlin.script.experimental.api.*
 import kotlin.script.experimental.host.ScriptingHostConfiguration
@@ -28,7 +29,7 @@ abstract class ScriptDefinition : UserDataHolderBase() {
     abstract val compilationConfiguration: ScriptCompilationConfiguration
     abstract val evaluationConfiguration: ScriptEvaluationConfiguration?
 
-    abstract fun isScript(file: File): Boolean
+    abstract fun isScript(scriptId: URI): Boolean
     abstract val fileExtension: String
     abstract val name: String
     open val defaultClassName: String = "Script"
@@ -75,7 +76,7 @@ abstract class ScriptDefinition : UserDataHolderBase() {
             )
         }
 
-        override fun isScript(file: File): Boolean = legacyDefinition.isScript(file.name)
+        override fun isScript(scriptId: URI): Boolean = scriptId.path?.let { legacyDefinition.isScript(it) } ?: isDefault
 
         override val fileExtension: String get() = legacyDefinition.fileExtension
 
@@ -130,11 +131,12 @@ abstract class ScriptDefinition : UserDataHolderBase() {
             compilationConfiguration[ScriptCompilationConfiguration.filePathPattern]?.takeIf { it.isNotBlank() }
         }
 
-        override fun isScript(file: File): Boolean =
-            file.name.endsWith(".$fileExtension") &&
-                    (filePathPattern?.let {
-                        Regex(it).matches(FileUtilRt.toSystemIndependentName(file.path))
-                    } ?: true)
+        override fun isScript(scriptId: URI): Boolean {
+            val path = scriptId.path ?: return false
+            return path.endsWith(".$fileExtension") && filePathPattern?.let {
+                Regex(it).matches(FileUtilRt.toSystemIndependentName(path))
+            } != false
+        }
 
         override val fileExtension: String get() = compilationConfiguration[ScriptCompilationConfiguration.fileExtension]!!
 
