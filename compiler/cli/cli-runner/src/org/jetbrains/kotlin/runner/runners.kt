@@ -141,14 +141,22 @@ class ScriptRunner(private val path: String) : RunnerWithCompiler() {
             addClasspathArgIfNeeded(classpath)
             add("-script")
             add(path)
+            addAll(arguments)
         }
         runCompiler(compilerClasspath, compilerArgs)
     }
 }
 
-class ExpressionRunner(private val code: String) : RunnerWithCompiler() {
+class ExpressionRunner(private val code: List<String>) : RunnerWithCompiler() {
     override fun run(classpath: List<URL>, arguments: List<String>, compilerClasspath: List<URL>) {
-        // TODO
-        throw RunnerException("evaluating expressions is not yet supported")
+        val compilerArgs = ArrayList<String>().apply {
+            addClasspathArgIfNeeded(classpath)
+            code.forEach {
+                add("-expression")
+                add(it)
+            }
+            addAll(arguments)
+        }
+        runCompiler(compilerClasspath, compilerArgs)
     }
 }
