@@ -82,6 +82,9 @@ abstract class CommonCompilerArguments : CommonToolArguments() {
     @Argument(value = "-expression", description = "Evaluate the given string as a Kotlin script")
     var expressions: Array<String>? by FreezableVar(null)
 
+    @Argument(value = "-script-definition", description = "Use explicitly specified script definition for scripts, REPL and expressions, instead of selecting it by the file name")
+    var forceScriptDefinition: String? by FreezableVar(null)
+
     @Argument(value = "-P", valueDescription = PLUGIN_OPTION_FORMAT, description = "Pass an option to a plugin")
     var pluginOptions: Array<String>? by FreezableVar(null)
 

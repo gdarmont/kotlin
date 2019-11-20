@@ -27,6 +27,18 @@ class MainKtsIT {
     }
 
     @Test
+    fun textMainKtsExpression() {
+        runWithK2JVMCompiler(
+            arrayOf(
+                "-cp", getMainKtsClassPath().joinToString(File.pathSeparator),
+                "-script-definition", "main.kts",
+                "-expression", "println(this::class.java.superclass.name)"
+            ),
+            listOf("org.jetbrains.kotlin.mainKts.MainKtsScript")
+        )
+    }
+
+    @Test
     fun testImport() {
         val mainKtsJar = File("dist/kotlinc/lib/kotlin-main-kts.jar")
         Assert.assertTrue("kotlin-main-kts.jar not found, run dist task: ${mainKtsJar.absolutePath}", mainKtsJar.exists())
@@ -50,11 +62,7 @@ fun runWithKotlincAndMainKts(
     expectedExitCode: Int = 0
 ) = runWithKotlinc(
     scriptPath, expectedOutPatterns, expectedExitCode,
-    classpath = listOf(
-        File("dist/kotlinc/lib/kotlin-main-kts.jar").also {
-            Assert.assertTrue("kotlin-main-kts.jar not found, run dist task: ${it.absolutePath}", it.exists())
-        }
-    )
+    classpath = getMainKtsClassPath()
 )
 
 fun runWithK2JVMCompilerAndMainKts(
@@ -63,10 +71,18 @@ fun runWithK2JVMCompilerAndMainKts(
     expectedExitCode: Int = 0
 ) = runWithK2JVMCompiler(
     scriptPath, expectedOutPatterns, expectedExitCode,
-    classpath = listOf(
-        File("dist/kotlinc/lib/kotlin-main-kts.jar").also {
+    classpath = getMainKtsClassPath()
+)
+
+private fun getMainKtsClassPath(): List<File> {
+    return listOf(
+        File("dist/kotlinc/lib/kotlin-main-kts.jar"),
+        File("dist/kotlinc/lib/kotlin-stdlib.jar"),
+        File("dist/kotlinc/lib/kotlin-script-runtime.jar")
+    ).also { cp ->
+        cp.forEach {
             Assert.assertTrue("kotlin-main-kts.jar not found, run dist task: ${it.absolutePath}", it.exists())
         }
-    )
-)
+    }
+}
 

@@ -19,6 +19,8 @@ interface ScriptDefinitionProvider {
     fun isScript(scriptId: URI): Boolean
 
     fun findDefinition(scriptId: URI): ScriptDefinition?
+    fun setDefinition(scriptId: URI, definition: ScriptDefinition)
+    fun getDefinition(definitionId: String): ScriptDefinition?
     fun getDefaultDefinition(): ScriptDefinition
 
     fun getKnownFilenameExtensions(): Sequence<String>
