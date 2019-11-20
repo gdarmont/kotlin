@@ -77,9 +77,10 @@ private fun Candidate.hasProperNonTrivialLowerConstraints(components: InferenceC
     val constructor = typeVariable.typeConstructor(context)
     val variableWithConstraints = csBuilder.currentStorage().notFixedTypeVariables[constructor] ?: return false
     val constraints = variableWithConstraints.constraints
-    return constraints.isNotEmpty() && constraints.all {
+    return constraints.isNotEmpty() && constraints.any {
         !it.type.typeConstructor(context).isIntegerLiteralTypeConstructor(context) &&
-                it.kind.isLower() && csBuilder.isProperType(it.type)
+                (it.kind.isLower() || it.kind.isEqual()) &&
+                csBuilder.isProperType(it.type)
     }
 
 }
@@ -184,7 +185,9 @@ class ConstraintSystemCompleter(val components: InferenceComponents) {
                     candidate?.postponedAtoms?.forEach {
                         to.addIfNotNull(it.safeAs<PostponedResolvedAtomMarker>()?.takeUnless { it.analyzed })
                     }
-                    this.branches.forEach { it.result.process(to) }
+                    this.branches.forEach {
+                        it.result.statements.lastOrNull()?.process(to)
+                    }
                 }
 
                 is FirTryExpression -> {
