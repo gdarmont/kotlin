@@ -346,7 +346,7 @@ class RawFirBuilder(session: FirSession, val stubMode: Boolean) : BaseFirBuilder
             val defaultDelegatedSuperTypeRef = when {
                 this is KtClass && this.isEnum() -> FirResolvedTypeRefImpl(
                     null,
-                    ConeClassTypeImpl(
+                    ConeClassLikeTypeImpl(
                         implicitEnumType.type.lookupTag,
                         delegatedSelfTypeRef?.coneTypeUnsafe<ConeKotlinType>()?.let { arrayOf(it) } ?: emptyArray(),
                         isNullable = false
