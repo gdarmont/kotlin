@@ -8,9 +8,7 @@ package org.jetbrains.kotlin.backend.common.lower
 import org.jetbrains.kotlin.backend.common.ClassLoweringPass
 import org.jetbrains.kotlin.backend.common.CommonBackendContext
 import org.jetbrains.kotlin.ir.IrStatement
-import org.jetbrains.kotlin.ir.UNDEFINED_OFFSET
 import org.jetbrains.kotlin.ir.declarations.*
-import org.jetbrains.kotlin.ir.expressions.IrBlock
 import org.jetbrains.kotlin.ir.expressions.IrExpression
 import org.jetbrains.kotlin.ir.expressions.IrInstanceInitializerCall
 import org.jetbrains.kotlin.ir.expressions.IrStatementOriginImpl
@@ -27,36 +25,35 @@ open class InitializersLowering(
     context: CommonBackendContext
 ) : InitializersLoweringBase(context) {
     override fun lower(irClass: IrClass) {
-        val nonStaticDeclarations = getDeclarationsWithNonStaticInitializers(irClass)
-        val instanceInitializerStatements = nonStaticDeclarations.mapNotNull { handleDeclaration(irClass, it) }
-        transformInstanceInitializerCallsInConstructors(irClass, instanceInitializerStatements)
-
-        val anonymousInitializers = nonStaticDeclarations.filterTo(hashSetOf()) { it is IrAnonymousInitializer }
-        irClass.declarations.removeAll(anonymousInitializers)
-    }
-
-    private fun getDeclarationsWithNonStaticInitializers(irClass: IrClass): List<IrDeclaration> =
-        irClass.declarations.filter {
+        val instanceInitializerStatements = extractInitializers(irClass) {
             (it is IrField && !it.isStatic) || (it is IrAnonymousInitializer && !it.isStatic)
         }
-
-    private fun transformInstanceInitializerCallsInConstructors(irClass: IrClass, instanceInitializerStatements: List<IrStatement>) {
         irClass.transformChildrenVoid(object : IrElementTransformerVoid() {
-            override fun visitInstanceInitializerCall(expression: IrInstanceInitializerCall): IrExpression {
-                val copiedBlock =
-                    IrBlockImpl(UNDEFINED_OFFSET, UNDEFINED_OFFSET, context.irBuiltIns.unitType, null, instanceInitializerStatements)
-                        .copy(irClass) as IrBlock
-                return IrBlockImpl(irClass.startOffset, irClass.endOffset, context.irBuiltIns.unitType, null, copiedBlock.statements)
-            }
+            // Only transform constructors of current class.
+            override fun visitClass(declaration: IrClass) = declaration
+
+            override fun visitSimpleFunction(declaration: IrSimpleFunction) = declaration
+
+            override fun visitInstanceInitializerCall(expression: IrInstanceInitializerCall): IrExpression =
+                IrBlockImpl(irClass.startOffset, irClass.endOffset, context.irBuiltIns.unitType, null, instanceInitializerStatements)
+                    .deepCopyWithSymbols(irClass)
         })
     }
 }
 
 abstract class InitializersLoweringBase(val context: CommonBackendContext) : ClassLoweringPass {
-    protected fun handleDeclaration(irClass: IrClass, declaration: IrDeclaration): IrStatement? = when (declaration) {
-        is IrField -> handleField(irClass, declaration)
-        is IrAnonymousInitializer -> handleAnonymousInitializer(declaration)
-        else -> null
+    protected fun extractInitializers(irClass: IrClass, filter: (IrDeclaration) -> Boolean): List<IrStatement> {
+        val result = mutableListOf<IrStatement>()
+        irClass.declarations.removeAll {
+            when {
+                !filter(it) -> return@removeAll false
+                it is IrField -> handleField(irClass, it)
+                it is IrAnonymousInitializer -> handleAnonymousInitializer(it)
+                else -> null
+            }?.let(result::add)
+            it is IrAnonymousInitializer
+        }
+        return result
     }
 
     private fun handleField(irClass: IrClass, declaration: IrField): IrStatement? {
@@ -85,6 +82,4 @@ abstract class InitializersLoweringBase(val context: CommonBackendContext) : Cla
         SYNTHESIZED_INIT_BLOCK,
         declaration.body.statements
     )
-
-    protected fun IrStatement.copy(containingDeclaration: IrDeclarationParent): IrStatement = deepCopyWithSymbols(containingDeclaration)
 }
