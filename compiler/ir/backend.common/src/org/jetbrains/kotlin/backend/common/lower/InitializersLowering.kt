@@ -36,12 +36,12 @@ open class InitializersLowering(
 
             override fun visitInstanceInitializerCall(expression: IrInstanceInitializerCall): IrExpression =
                 IrBlockImpl(irClass.startOffset, irClass.endOffset, context.irBuiltIns.unitType, null, instanceInitializerStatements)
-                    .deepCopyWithSymbols(irClass)
+                    .deepCopyWithSymbols(irClass) // TODO ensure there is only one InstanceInitializerCall (in a primary constructor)
         })
     }
 }
 
-abstract class InitializersLoweringBase(val context: CommonBackendContext) : ClassLoweringPass {
+abstract class InitializersLoweringBase(open val context: CommonBackendContext) : ClassLoweringPass {
     protected fun extractInitializers(irClass: IrClass, filter: (IrDeclaration) -> Boolean): List<IrStatement> {
         val result = mutableListOf<IrStatement>()
         irClass.declarations.removeAll {
@@ -58,6 +58,7 @@ abstract class InitializersLoweringBase(val context: CommonBackendContext) : Cla
 
     private fun handleField(irClass: IrClass, declaration: IrField): IrStatement? {
         val irFieldInitializer = declaration.initializer?.expression ?: return null
+        declaration.initializer = null
 
         val receiver =
             if (!declaration.isStatic) // TODO isStaticField
