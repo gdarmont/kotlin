@@ -91,8 +91,9 @@ class KotlinCodeBlockModificationListener(
                 // skip change if it contains only virtual/fake change
                 if (changedElements.isNotEmpty() &&
                     // ignore formatting (whitespaces etc)
-                    (isFormattingChange(changeSet) ||
-                            changedElements.all { !it.psi.isPhysical })
+                    // TODO: it is worth to think about comments:
+                    // but keep in mind that comment entire line leads to a single change with PsiComment
+                    (isFormattingChange(changeSet) || changedElements.all { !it.psi.isPhysical })
                 ) return
 
                 val inBlockChange = inBlockModifications(changedElements)
@@ -195,7 +196,7 @@ class KotlinCodeBlockModificationListener(
 
         fun isFormattingChange(changeSet: TreeChangeEvent): Boolean =
             changeSet.changedElements.all {
-                changeSet.getChangesByElement(it).affectedChildren.all { c -> (c is PsiWhiteSpace || c is PsiComment) }
+                changeSet.getChangesByElement(it).affectedChildren.all { c -> (c is PsiWhiteSpace) }
             }
 
         fun getInsideCodeBlockModificationScope(element: PsiElement): BlockModificationScopeElement? {
