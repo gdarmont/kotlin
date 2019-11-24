@@ -18,24 +18,30 @@ import com.intellij.openapi.diagnostic.Logger
 class CoroutinesDebugConfigurationExtension : RunConfigurationExtension() {
     private val log = Logger.getInstance(this::class.java)
 
-    override fun isApplicableFor(configuration: RunConfigurationBase<*>) = isCoroutineDebuggerEnabled()
+    override fun isApplicableFor(configuration: RunConfigurationBase<*>) = coroutineDebuggerEnabled()
 
     override fun <T : RunConfigurationBase<*>?> updateJavaParameters(
         configuration: T,
         params: JavaParameters?,
         runnerSettings: RunnerSettings?
     ) {
-        if (!isCoroutineDebuggerEnabled()) return
+        if (!coroutineDebuggerEnabled())
+            return
         if (runnerSettings is DebuggingRunnerData) {
+            val configurationName = (configuration as RunConfigurationBase<*>).type.id
+            log.warn("Starting $configurationName")
             try {
-                val kotlinxCoroutinesClassPathLib = params?.classPath?.pathList?.first { it.contains("kotlinx-coroutines-debug") }
-                initializeCoroutineAgent(params!!, kotlinxCoroutinesClassPathLib)
+                if (!gradleConfiguration(configurationName)) { // gradle test logic in KotlinGradleCoroutineDebugProjectResolver
+                    val kotlinxCoroutinesClassPathLib = params?.classPath?.pathList?.first { it.contains("kotlinx-coroutines-debug") }
+                    initializeCoroutineAgent(params!!, kotlinxCoroutinesClassPathLib)
+                }
                 registerProjectCoroutineListener(configuration)
             } catch (e: NoSuchElementException) {
                 log.warn("'kotlinx-coroutines-debug' not found in classpath. Coroutine debugger disabled.")
             }
-            if(true)
-                registerProjectCoroutineListener(configuration)
         }
     }
+
+    fun gradleConfiguration(configurationName: String) =
+        "GradleRunConfiguration".equals(configurationName) || "KotlinGradleRunConfiguration".equals(configurationName)
 }

@@ -51,7 +51,7 @@ class CoroutineXDebuggerManagerListener(val project: Project) : XDebuggerManager
      * Adds panel to XDebugSessionTab
      */
     private fun registerCoroutinesPanel(ui: RunnerLayoutUi, session: DebuggerSession) {
-        val panel = CoroutinesPanel(session.project, session.contextManager)
+        val panel = CoroutinesPanel(project, session.contextManager)
         val content = ui.createContent(
             "CoroutinesContent", panel, "Coroutines", // TODO(design)
             AllIcons.Debugger.ThreadGroup, null
@@ -89,7 +89,7 @@ class CoroutineXDebuggerManagerListener(val project: Project) : XDebuggerManager
 
 internal var Project.listenerCreated: Boolean? by UserDataProperty(Key.create("COROUTINES_DEBUG_TAB_CREATE_LISTENER"))
 
-internal fun isCoroutineDebuggerEnabled() = Registry.`is`("kotlin.debugger.coroutines")
+internal fun coroutineDebuggerEnabled() = Registry.`is`("kotlin.debugger.coroutines")
 
 internal fun initializeCoroutineAgent(params: JavaParameters, it: String?) {
     params.vmParametersList?.add("-javaagent:$it")
