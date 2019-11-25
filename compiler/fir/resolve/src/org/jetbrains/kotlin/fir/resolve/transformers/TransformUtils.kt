@@ -35,17 +35,17 @@ internal object MapArguments : FirDefaultTransformer<Map<FirElement, FirElement>
     ): CompositeTransformResult<FirStatement> {
         return (wrappedArgumentExpression.transformChildren(this, data) as FirStatement).compose()
     }
-
-    override fun transformWhenBranch(
-        whenBranch: FirWhenBranch,
-        data: Map<FirElement, FirElement>
-    ): CompositeTransformResult<FirWhenBranch> {
-        return (whenBranch.transformChildren(this, data) as FirWhenBranch).compose()
-    }
-
-    override fun transformBlock(block: FirBlock, data: Map<FirElement, FirElement>): CompositeTransformResult<FirStatement> {
-        return (block.transformChildren(this, data) as FirBlock).compose()
-    }
+//
+//    override fun transformWhenBranch(
+//        whenBranch: FirWhenBranch,
+//        data: Map<FirElement, FirElement>
+//    ): CompositeTransformResult<FirWhenBranch> {
+//        return (whenBranch.transformChildren(this, data) as FirWhenBranch).compose()
+//    }
+//
+//    override fun transformBlock(block: FirBlock, data: Map<FirElement, FirElement>): CompositeTransformResult<FirStatement> {
+//        return (block.transformChildren(this, data) as FirBlock).compose()
+//    }
 }
 
 internal object StoreType : FirDefaultTransformer<FirTypeRef>() {
