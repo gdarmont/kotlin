@@ -12,6 +12,8 @@ import org.jetbrains.kotlin.fir.diagnostics.FirStubDiagnostic
 import org.jetbrains.kotlin.fir.expressions.FirFunctionCall
 import org.jetbrains.kotlin.fir.expressions.FirQualifiedAccessExpression
 import org.jetbrains.kotlin.fir.references.FirErrorNamedReference
+import org.jetbrains.kotlin.fir.references.FirNamedReference
+import org.jetbrains.kotlin.fir.resolve.calls.FirNamedReferenceWithCandidate
 import org.jetbrains.kotlin.fir.resolve.firProvider
 import org.jetbrains.kotlin.fir.resolve.impl.FirProviderImpl
 import org.jetbrains.kotlin.fir.types.*
@@ -44,6 +46,7 @@ class FirResolveBench(val withProgress: Boolean) {
         val implicitTypes: Int,
         val errorFunctionCallTypes: Int,
         val errorQualifiedAccessTypes: Int,
+        val errorIncompleteCandidate: Int,
         val fileCount: Int,
         val errorTypesReports: Map<String, ErrorTypeReport>,
         val timePerTransformer: Map<String, Measure>
@@ -81,6 +84,7 @@ class FirResolveBench(val withProgress: Boolean) {
     var unresolvedTypes = 0
     var errorFunctionCallTypes = 0
     var errorQualifiedAccessTypes = 0
+    var errorIncompleteCandidate = 0
     var implicitTypes = 0
     var fileCount = 0
     var totalTime = 0L
@@ -190,6 +194,13 @@ class FirResolveBench(val withProgress: Boolean) {
                         element.acceptChildren(this)
                     }
 
+                    override fun visitNamedReference(namedReference: FirNamedReference) {
+                        if (namedReference is FirNamedReferenceWithCandidate) {
+                            errorIncompleteCandidate++
+                        }
+                        super.visitNamedReference(namedReference)
+                    }
+
                     override fun visitFunctionCall(functionCall: FirFunctionCall) {
                         val typeRef = functionCall.typeRef
                         val callee = functionCall.calleeReference
@@ -283,6 +294,7 @@ class FirResolveBench(val withProgress: Boolean) {
         implicitTypes,
         errorFunctionCallTypes,
         errorQualifiedAccessTypes,
+        errorIncompleteCandidate,
         fileCount,
         errorTypesReports,
         timePerTransformer.mapKeys { (klass, _) -> klass.simpleName!!.toString() }
@@ -358,6 +370,7 @@ fun FirResolveBench.TotalStatistics.report(stream: PrintStream, header: String) 
         println("   - unresolved calls: $errorFunctionCallTypes")
         println("   - unresolved q.accesses: $errorQualifiedAccessTypes")
         println("Erroneously resolved implicit types: $implicitTypes (${implicitTypes percentOf resolvedTypes} of resolved)")
+        println("Incomplete calls: $errorIncompleteCandidate")
         println("Unique error types: $uniqueErrorTypes")
 
         printTable(stream) {
