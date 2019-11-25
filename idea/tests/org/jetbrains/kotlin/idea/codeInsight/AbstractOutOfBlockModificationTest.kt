@@ -13,12 +13,15 @@ import com.intellij.psi.PsiElement;
 import com.intellij.psi.PsiManager;
 import com.intellij.psi.impl.PsiModificationTrackerImpl;
 import com.intellij.psi.util.PsiTreeUtil;
+import kotlin.jvm.functions.Function1;
 import org.jetbrains.kotlin.idea.caches.resolve.ResolutionUtils;
 import org.jetbrains.kotlin.idea.caches.trackers.KotlinCodeBlockModificationListenerKt;
 import org.jetbrains.kotlin.idea.resolve.ResolutionFacade;
+import org.jetbrains.kotlin.idea.test.DirectiveBasedActionUtils;
 import org.jetbrains.kotlin.idea.test.KotlinLightCodeInsightFixtureTestCase;
 import org.jetbrains.kotlin.psi.*;
 import org.jetbrains.kotlin.resolve.BindingContext;
+import org.jetbrains.kotlin.resolve.diagnostics.Diagnostics;
 import org.jetbrains.kotlin.resolve.lazy.ResolveSession;
 import org.jetbrains.kotlin.test.InTextDirectivesUtils;
 
@@ -66,6 +69,7 @@ public abstract class AbstractOutOfBlockModificationTest extends KotlinLightCode
         if (!isSkipCheckDefined) {
             checkOOBWithDescriptorsResolve(expectedOutOfBlock);
         }
+
     }
 
     private void checkOOBWithDescriptorsResolve(boolean expectedOutOfBlock) {
@@ -100,6 +104,12 @@ public abstract class AbstractOutOfBlockModificationTest extends KotlinLightCode
             assertEquals("Expected out-of-block should result declaration analyzed and vise versa", expectedOutOfBlock,
                          declarationProcessed);
         }
+
+        checkForUnexpectedErrors();
+    }
+
+    private void checkForUnexpectedErrors() {
+        DirectiveBasedActionUtils.INSTANCE.checkForUnexpectedErrors((KtFile) myFixture.getFile());
     }
 
     private String getStringToType() {
