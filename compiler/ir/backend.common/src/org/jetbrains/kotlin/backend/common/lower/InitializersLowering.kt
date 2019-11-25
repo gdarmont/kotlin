@@ -7,6 +7,7 @@ package org.jetbrains.kotlin.backend.common.lower
 
 import org.jetbrains.kotlin.backend.common.ClassLoweringPass
 import org.jetbrains.kotlin.backend.common.CommonBackendContext
+import org.jetbrains.kotlin.backend.common.IrElementTransformerVoidWithContext
 import org.jetbrains.kotlin.ir.IrStatement
 import org.jetbrains.kotlin.ir.declarations.*
 import org.jetbrains.kotlin.ir.expressions.IrExpression
@@ -16,27 +17,25 @@ import org.jetbrains.kotlin.ir.expressions.impl.IrBlockImpl
 import org.jetbrains.kotlin.ir.expressions.impl.IrGetValueImpl
 import org.jetbrains.kotlin.ir.expressions.impl.IrSetFieldImpl
 import org.jetbrains.kotlin.ir.util.deepCopyWithSymbols
-import org.jetbrains.kotlin.ir.visitors.IrElementTransformerVoid
 import org.jetbrains.kotlin.ir.visitors.transformChildrenVoid
 
 object SYNTHESIZED_INIT_BLOCK : IrStatementOriginImpl("SYNTHESIZED_INIT_BLOCK")
 
-open class InitializersLowering(
-    context: CommonBackendContext
-) : InitializersLoweringBase(context) {
+open class InitializersLowering(context: CommonBackendContext) : InitializersLoweringBase(context) {
     override fun lower(irClass: IrClass) {
         val instanceInitializerStatements = extractInitializers(irClass) {
             (it is IrField && !it.isStatic) || (it is IrAnonymousInitializer && !it.isStatic)
         }
-        irClass.transformChildrenVoid(object : IrElementTransformerVoid() {
+        irClass.transformChildrenVoid(object : IrElementTransformerVoidWithContext() {
             // Only transform constructors of current class.
-            override fun visitClass(declaration: IrClass) = declaration
+            override fun visitClassNew(declaration: IrClass) = declaration
 
             override fun visitSimpleFunction(declaration: IrSimpleFunction) = declaration
 
             override fun visitInstanceInitializerCall(expression: IrInstanceInitializerCall): IrExpression =
                 IrBlockImpl(irClass.startOffset, irClass.endOffset, context.irBuiltIns.unitType, null, instanceInitializerStatements)
-                    .deepCopyWithSymbols(irClass) // TODO ensure there is only one InstanceInitializerCall (in a primary constructor)
+                    // TODO ensure there is only one InstanceInitializerCall (in a primary constructor)
+                    .deepCopyWithSymbols(currentScope!!.irElement as IrDeclarationParent)
         })
     }
 }
@@ -56,31 +55,25 @@ abstract class InitializersLoweringBase(open val context: CommonBackendContext) 
         return result
     }
 
-    private fun handleField(irClass: IrClass, declaration: IrField): IrStatement? {
-        val irFieldInitializer = declaration.initializer?.expression ?: return null
-        declaration.initializer = null
+    protected open fun shouldEraseFieldInitializer(irField: IrField): Boolean = true
 
-        val receiver =
-            if (!declaration.isStatic) // TODO isStaticField
-                IrGetValueImpl(
-                    irFieldInitializer.startOffset, irFieldInitializer.endOffset,
-                    irClass.thisReceiver!!.type, irClass.thisReceiver!!.symbol
-                )
-            else null
-        return IrSetFieldImpl(
-            irFieldInitializer.startOffset, irFieldInitializer.endOffset,
-            declaration.symbol,
-            receiver,
-            irFieldInitializer,
-            context.irBuiltIns.unitType,
-            null, null
-        )
-    }
+    private fun handleField(irClass: IrClass, declaration: IrField): IrStatement? =
+        declaration.initializer?.run {
+            val receiver = if (!declaration.isStatic) // TODO isStaticField
+                IrGetValueImpl(startOffset, endOffset, irClass.thisReceiver!!.type, irClass.thisReceiver!!.symbol)
+            else
+                null
+            val value = if (shouldEraseFieldInitializer(declaration)) {
+                declaration.initializer = null
+                expression
+            } else {
+                expression.deepCopyWithSymbols()
+            }
+            IrSetFieldImpl(startOffset, endOffset, declaration.symbol, receiver, value, context.irBuiltIns.unitType)
+        }
 
-    private fun handleAnonymousInitializer(declaration: IrAnonymousInitializer): IrStatement = IrBlockImpl(
-        declaration.startOffset, declaration.endOffset,
-        context.irBuiltIns.unitType,
-        SYNTHESIZED_INIT_BLOCK,
-        declaration.body.statements
-    )
+    private fun handleAnonymousInitializer(declaration: IrAnonymousInitializer): IrStatement =
+        with(declaration) {
+            IrBlockImpl(startOffset, endOffset, context.irBuiltIns.unitType, SYNTHESIZED_INIT_BLOCK, body.statements)
+        }
 }
