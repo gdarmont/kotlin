@@ -6,4 +6,25 @@ fun foo() {
         // Some comment
         it
     }
+
+    test() {
+//        val a = 42
+    }
+
+    test() {
+/*
+        val a = 42
+*/
+    }
+
+    test() {
+        /*
+            val a = 42
+        */
+    }
+
+    test() {
+//        val a = 42
+        val b = 44
+    }
 }

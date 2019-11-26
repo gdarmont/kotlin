@@ -23,6 +23,7 @@ import org.jetbrains.kotlin.idea.formatter.KotlinSpacingBuilder.CustomSpacingBui
 import org.jetbrains.kotlin.idea.util.requireNode
 import org.jetbrains.kotlin.lexer.KtTokens.*
 import org.jetbrains.kotlin.psi.*
+import org.jetbrains.kotlin.psi.psiUtil.children
 import org.jetbrains.kotlin.psi.psiUtil.isObjectLiteral
 import org.jetbrains.kotlin.psi.psiUtil.siblings
 import org.jetbrains.kotlin.psi.psiUtil.textRangeWithoutComments
@@ -87,8 +88,16 @@ fun createSpacingBuilder(settings: CodeStyleSettings, builderUtil: KotlinSpacing
                     null
                 }
             }
+
             inPosition(right = BLOCK_COMMENT).spacing(commentSpacing(0))
             inPosition(right = EOL_COMMENT).spacing(commentSpacing(1))
+            inPosition(parent = FUNCTION_LITERAL, right = BLOCK).customRule { _, _, right ->
+                when (right.node?.children()?.firstOrNull()?.elementType) {
+                    BLOCK_COMMENT -> commentSpacing(0)
+                    EOL_COMMENT -> commentSpacing(1)
+                    else -> null
+                }
+            }
 
             inPosition(left = CLASS, right = CLASS).emptyLinesIfLineBreakInLeft(1)
             inPosition(left = CLASS, right = OBJECT_DECLARATION).emptyLinesIfLineBreakInLeft(1)
@@ -643,4 +652,19 @@ private fun excludeLambdasAndObjects(parent: ASTBlock): List<TextRange> {
         }
     })
     return TextRangeUtil.excludeRanges(parent.textRange, rangesToExclude).toList()
+}
+
+fun main() {
+/*awd*/
+//    dwa dawd
+    val b = 32
+    lambda {
+        //        val a = 42
+    }
+
+//    val a = 3
+}
+
+fun lambda(block: () -> Unit) {
+
 }
