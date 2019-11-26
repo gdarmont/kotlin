@@ -26,10 +26,10 @@ abstract class AbstractConfigureKotlinInTempDirTest : AbstractConfigureKotlinTes
 
         val projectRoot = tempDir.path
 
-        val projectFilePath = projectRoot + "/projectFile.ipr"
+        val projectFilePath = "$projectRoot/projectFile.ipr"
         if (!File(projectFilePath).exists()) {
-            val dotIdeaPath = projectRoot + "/.idea"
-            Assert.assertTrue("Project file or '.idea' dir should exists in " + projectRoot, File(dotIdeaPath).exists())
+            val dotIdeaPath = "$projectRoot/.idea"
+            Assert.assertTrue("Project file or '.idea' dir should exists in $projectRoot", File(dotIdeaPath).exists())
             return File(projectRoot).toPath()
         }
 
