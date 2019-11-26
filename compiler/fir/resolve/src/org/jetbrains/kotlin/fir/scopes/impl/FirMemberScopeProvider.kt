@@ -5,16 +5,11 @@
 
 package org.jetbrains.kotlin.fir.scopes.impl
 
-import org.jetbrains.kotlin.builtins.jvm.JavaToKotlinClassMap
 import org.jetbrains.kotlin.fir.FirSession
 import org.jetbrains.kotlin.fir.FirSessionComponent
 import org.jetbrains.kotlin.fir.declarations.FirClass
-import org.jetbrains.kotlin.fir.declarations.FirRegularClass
-import org.jetbrains.kotlin.fir.resolve.ScopeSession
-import org.jetbrains.kotlin.fir.resolve.firSymbolProvider
 import org.jetbrains.kotlin.fir.resolve.memberScopeProvider
 import org.jetbrains.kotlin.fir.scopes.FirScope
-import org.jetbrains.kotlin.fir.scopes.jvm.JvmMappedScope
 import org.jetbrains.kotlin.name.ClassId
 import org.jetbrains.kotlin.name.FqName
 import org.jetbrains.kotlin.name.Name
@@ -25,39 +20,13 @@ class FirMemberScopeProvider : FirSessionComponent {
     private val nestedClassifierCache = mutableMapOf<FirClass<*>, FirNestedClassifierScope>()
     private val selfImportingCache = mutableMapOf<FqName, FirSelfImportingScope>()
 
-    private fun wrapDeclaredScopeWithJvmMapped(
-        klass: FirClass<*>,
-        regularMemberScope: FirClassDeclaredMemberScope,
-        scopeSession: ScopeSession
-    ): FirScope {
-        val javaClassId = JavaToKotlinClassMap.mapKotlinToJava(klass.symbol.classId.asSingleFqName().toUnsafe())
-            ?: return regularMemberScope
-        val symbolProvider = klass.session.firSymbolProvider
-        val javaClass = symbolProvider.getClassLikeSymbolByFqName(javaClassId)?.fir as? FirRegularClass
-            ?: return regularMemberScope
-        val preparedSignatures = JvmMappedScope.prepareSignatures(javaClass)
-        return if (preparedSignatures.isNotEmpty()) {
-            symbolProvider.getClassUseSiteMemberScope(javaClassId, klass.session, scopeSession)?.let {
-                JvmMappedScope(
-                    regularMemberScope,
-                    it,
-                    preparedSignatures
-                )
-            } ?: regularMemberScope
-        } else {
-            regularMemberScope
-        }
-    }
-
     fun declaredMemberScope(
         klass: FirClass<*>,
-        scopeSession: ScopeSession?,
         useLazyNestedClassifierScope: Boolean,
         existingNames: List<Name>?
     ): FirScope {
         return declaredMemberCache.getOrPut(klass) {
-            val regularMemberScope = FirClassDeclaredMemberScope(klass, useLazyNestedClassifierScope, existingNames)
-            scopeSession?.let { wrapDeclaredScopeWithJvmMapped(klass, regularMemberScope, it) } ?: regularMemberScope
+            FirClassDeclaredMemberScope(klass, useLazyNestedClassifierScope, existingNames)
         }
     }
 
@@ -77,14 +46,13 @@ class FirMemberScopeProvider : FirSessionComponent {
 
 fun declaredMemberScope(
     klass: FirClass<*>,
-    scopeSession: ScopeSession? = null,
     useLazyNestedClassifierScope: Boolean = false,
     existingNames: List<Name>? = null
 ): FirScope {
     return klass
         .session
         .memberScopeProvider
-        .declaredMemberScope(klass, scopeSession, useLazyNestedClassifierScope, existingNames)
+        .declaredMemberScope(klass, useLazyNestedClassifierScope, existingNames)
 }
 
 fun nestedClassifierScope(klass: FirClass<*>): FirNestedClassifierScope {

@@ -95,10 +95,10 @@ class JavaSymbolProvider(
         return scopeSession.getOrBuild(regularClass.symbol, JAVA_USE_SITE) {
             val declaredScope = declaredMemberScope(
                 regularClass,
-                scopeSession,
                 useLazyNestedClassifierScope = regularClass is FirJavaClass,
                 existingNames = (regularClass as? FirJavaClass)?.existingNestedClassifierNames
             )
+            val wrappedDeclaredScope = wrapScopeWithJvmMapped(regularClass.classId, declaredScope, useSiteSession, scopeSession)
             val superTypeEnhancementScopes =
                 lookupSuperTypes(regularClass, lookupInterfaces = true, deep = false, useSiteSession = useSiteSession)
                     .mapNotNull { useSiteSuperType ->
@@ -115,7 +115,7 @@ class JavaSymbolProvider(
                     }
             JavaClassUseSiteMemberScope(
                 regularClass, useSiteSession,
-                JavaSuperTypeScope(regularClass, useSiteSession, superTypeEnhancementScopes), declaredScope
+                JavaSuperTypeScope(regularClass, useSiteSession, superTypeEnhancementScopes), wrappedDeclaredScope
             )
         }
     }
