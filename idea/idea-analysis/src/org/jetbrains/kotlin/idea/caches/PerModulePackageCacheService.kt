@@ -249,10 +249,12 @@ class PerModulePackageCacheService(private val project: Project) : Disposable {
     }
 
     internal fun notifyPackageChange(file: VFileEvent): Unit = synchronized(this) {
+        if (file.requestor !== project && file.requestor is Project) return
         pendingVFileChanges += file
     }
 
     internal fun notifyPackageChange(file: KtFile): Unit = synchronized(this) {
+        if (file.project !== project) return
         pendingKtFileChanges += file
     }
 
